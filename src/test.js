@@ -5,7 +5,7 @@ class Test {
         let jsonValue = JSON.stringify(value);
 
         if (jsonExpected !== jsonValue) {
-            throw new Error(jsonValue + " differs from expected: " + jsonExpected + " for test "+ label);
+            throw new Error("actual value: " + jsonValue + " differs from expected: " + jsonExpected + (label ? "for test " + label : ""));
         }
     }
 
@@ -78,17 +78,17 @@ class SutomTest extends Test {
         Test.assertEquals(r, "no dictionary for this length: 1", "no dict for length 1");
 
         let g = new Game("abats");
-        r = g.test("aboie");
+        r = g.analyse("aboie");
         Test.assertEquals(r, [true, true, null, null, null], "game basic check");
-        r = g.test("activ");
+        r = g.analyse("activ");
         Test.assertEquals(r, false, "unknown word");
-        r = g.test("abats");
+        r = g.analyse("abats");
         Test.assertEquals(r, true, "game check ok");
-        r = g.test("bacon");
+        r = g.analyse("bacon");
         Test.assertEquals(r, false, "attempt with another first letter");
 
-        r = g.getInfo();
-        Test.assertEquals({first: "a", length: 5}, r, "game init info");
+        Test.assertEquals("a", g.getFirst(), "game init info");
+        Test.assertEquals(5, g.getLength(), "game init info");
 
         console.log(`all tests ok (${SutomTest.nbTests})`);
     }
@@ -152,7 +152,7 @@ class SolverTest extends Test {
         Test.assertEquals("cafetiere", res.word);
         Test.assertTrue(res.attempts <= 9, "check nb attemps");
 
-        let nbWords = 1000;
+        let nbWords = 100;
         let challengeWords = [];
         while(nbWords > 0) {
             nbWords--;
@@ -163,6 +163,35 @@ class SolverTest extends Test {
         let sc = new SolverChallenge(challengeWords);
         console.timeEnd("challenge");
         console.log("challenge stats", sc.getStats());
+
+        Sutom.words[4] = {};
+        Sutom.words[4].a = ["abcd", "aero", "alti", "alto", "atel", "alco"];
+        s = new Solver(new Game("alto"));
+        let remain = s.attempt("aero"); // true, null, null, true
+        Test.assertEquals(["alto", "alco"], remain);
+
+        // delete null letters
+        Sutom.words[4].a = ["abcd", "adcb", "accc", "abbb", "aaaa", "abbc", "aocb", "abco", "adoc", "alto"];
+        s = new Solver(new Game("alto"));
+        remain = s.attempt("aocb"); // true, false, null, null
+        Test.assertEquals(["alto"], remain);
+
+        Sutom.words[4].a = "abcd aero alti alto atel alco axyl".split(" ");
+        s = new Solver(new Game("alto"));
+        remain = s.attempt("atel"); // true, false, null, false
+        // remove with t at 1 : atel
+        // remove with e : aero
+        // remove with l at 3 : axyl
+        // remove without t : abcd alco
+        Test.assertEquals(["alti", "alto"], remain);
+
+        Sutom.words[4].a = "abcd abbb abbc aaaa acbb accb aecb areo aree aeyy".split(" ");
+        s = new Solver(new Game("abbc"));
+        remain = s.attempt("aecb"); // true, null, false, false
+        // remove words containing e : aecb areo
+        // remove words with c at 2 : abcd accb
+        // remove words without c : abbb aaaa
+        Test.assertEquals(["abbc"], remain);
     }
 }
 

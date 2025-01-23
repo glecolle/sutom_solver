@@ -34,86 +34,108 @@ class Solver {
             this.possibleLetters[l] = {count: 0, more: true, notAt: []};
         }
 
-        let info = game.getInfo();
-        let first = info.first;
-        this.length = info.length;
+        this.first = game.getFirst();
+        this.length = game.getLength();
 
-        this.wordMask = [first];
+        this.wordMask = [this.first];
         for (let i=1; i < this.length ; i++) {
             this.wordMask.push("*");
         }
 
-        this.remainingWords = Sutom.getWords(first, this.length);
+        this.remainingWords = Sutom.getWords(this.first, this.length);
     }
 
     /** Iterates to find the word  */
     solve() {
         let iter;
         for (iter = 1; iter < 50 ; iter++) {
-            let w = this.next(this.remainingWords);
+            let word = this.next();
+            let res = this.attempt(word, iter);
 
-            // TODO tester le mot candidat avec game
-            let res = this.game.test(w);
-
-            if (res === true) {
-                console.log("found word:", w, "in", iter, "attempts");
-                return {word: w, attempts: iter};
+            if (typeof res == "boolean") {
+                return res;
+            } else if (res && res.word) {
+                return res;
             }
-
-            if (res === false) {
-                console.log("could not find word, not an existing one");
-                return false;
-            }
-
-            delete this.remainingWords[this.remainingWords.indexOf(w)];
-
-            console.log("attempt", iter, "with word", w, "returned", res);
-
-            for(let i = 1; i < this.length ; i++) {
-                let nbOcc = w.substring(1).split(w[i]).length - 1;
-
-                if (res[i] === true) {
-                    // good letter
-                    if (this.wordMask[i] === "*") {
-                        this.wordMask[i] = w[i];
-                        this.remove(w[i], "notAt", i);
-                    }
-                } else if (res[i] === false) {
-                    // misplaced letter
-                    //TODO si plusieurs instances de cette lettre et null, marquer more = false et ne pas supprimer
-                    if (this.possibleLetters[w[i]].count < nbOcc) {
-                        // new misplaced letter
-                        this.possibleLetters[w[i]].count=1;
-                        this.possibleLetters[w[i]].notAt.push(i);
-                        this.remove(w[i], "at", i);
-                    } else if (this.possibleLetters[w[i]].notAt.indexOf(i) === -1) {
-                        // new position for a misplaced letter
-                        this.possibleLetters[w[i]].count=1;
-                        this.possibleLetters[w[i]].notAt.push(i);
-                        this.remove(w[i], "at", i);
-                    }
-                } else if (res[i] === null) {
-                    // letter not present in secret
-                    if (nbOcc > 1) {
-                        // do nothing for the moment, might be improved
-                        //console.log("do nothing when one of several occurences is null, nbOcc=", nbOcc, "for", w[i]);
-                        this.remove(w[i], "at", i);
-                    } else if (this.impossibleLetters.indexOf(w[i]) === -1) {
-                        this.impossibleLetters.push(w[i]);
-                        this.remove(w[i], "after", 1);
-                    }
-                }
-            }
-
-            // TODO éliminer les mots qui contient plus d'occurrences de certaines lettres (quand on connait le nombre exact d'une lettre: possibleLetters[letter].more == false)
         }
 
         return {word: null, attempts: iter};
     }
 
+    attempt(word, iter) {
+        let res = this.game.analyse(word);
+
+        console.log("attempt", iter, "with word", word, "returned", res);
+
+        if (res === true) {
+            console.log("found word:", word, "in", iter, "attempts");
+            return {word, attempts: iter};
+        }
+
+        if (res === false) {
+            console.log("could not find word, not an existing one");
+            return false;
+        }
+
+        return this.reduceRemainingWords(word, res);
+    }
+
+    reduceRemainingWords(w, res) {
+        this.remove(w, "equals");
+
+
+        for (let i = 1; i < this.length ; i++) {
+            let nbOcc = w.split(w[i]).length - 1;
+
+            if (res[i] === true) {
+                if (this.wordMask[i] === "*") {
+                    console.log("good letter: ", w[i], "at", i);
+                    this.wordMask[i] = w[i];
+                    this.remove(w[i], "notAt", i);
+                }
+            } else if (res[i] === false) {
+                //TODO si plusieurs instances de cette lettre et null, marquer more = false et ne pas supprimer
+                if (this.possibleLetters[w[i]].count < nbOcc) {
+                    console.log("new misplaced letter", w[i], "at", i);
+                    this.possibleLetters[w[i]].count=1;
+                    this.possibleLetters[w[i]].notAt.push(i);
+                    this.remove(w[i], "at", i);
+                } else if (this.possibleLetters[w[i]].notAt.indexOf(i) === -1) {
+                    console.log("new position for a misplaced letter", w[i], "at", i);
+                    this.possibleLetters[w[i]].count=1;
+                    this.possibleLetters[w[i]].notAt.push(i);
+                    this.remove(w[i], "at", i);
+                }
+                this.remove(w[i], "notIn");
+            } else if (res[i] === null) {
+                if (nbOcc === 1) {
+                    console.log("letter is not present in secret", w[i]);
+                    this.remove(w[i], "in");
+                }
+
+                /*if (this.impossibleLetters.indexOf(w[i]) === -1) {
+                    console.log("letter not present in secret", w[i], "at", i);
+                    this.remove(w[i], "at", i);
+                    this.impossibleLetters.push(w[i]);
+                }*/
+            }
+        }
+
+        // TODO éliminer les mots qui contient plus d'occurrences de certaines lettres (quand on connait le nombre exact d'une lettre: possibleLetters[letter].more == false)
+        return this.remainingWords;
+    }
+
+    getRemaining() {
+        return this.remainingWords;
+    }
+
     /** Find the next word to try according to current state and remaining words, get the word having the most untested letters and most frequent letters */
-    next() {
-        let top = new TopN(5);
+    next(count) {
+        if (typeof count == "undefined") {
+            count = 1;
+        }
+
+        let top = new TopN(count);
 
         let freq = this.getLetterFrequency();
 
@@ -128,7 +150,11 @@ class Solver {
         let topWords = top.getWithScores();
         console.log("next words:", topWords.map(t => { return `${t.value} (${t.score})` }).join(", "));
 
-        return topWords[0].value;
+        if (count == 1 && topWords.length > 0) {
+            return topWords[0].value;
+        } else {
+            return topWords.map(i => { return i.value; });
+        }
     }
 
     /** @return list of letters from remaining words by descending frequency {letter: frequency_among_all_letters} */
@@ -177,25 +203,50 @@ class Solver {
         return score;
     }
 
+    /**
+     * @param letter
+     * @param operator at, notAt, notIn
+     * @param index 0 index based
+     */
     remove(letter, operator, index) {
+        let logCount=5;
         this.remainingWords.forEach((word, i) => {
+
             if (operator === "at") {
                 if (word[index] === letter) {
                     this.remainingWords[i] = null;
+                    logCount >= 0 && console.log("   remove", word);
+                    logCount--;
                 }
             } else if (operator === "notAt") {
                 if (word[index] !== letter) {
                     this.remainingWords[i] = null;
+                    logCount >= 0 && console.log("   remove", word);
+                    logCount--;
                 }
-            } else if (operator === "after") {
-                if (word.indexOf(letter, index) > index) {
+            } else if (operator === "notIn") {
+                if (word.indexOf(letter) == -1) {
                     this.remainingWords[i] = null;
+                    logCount >= 0 && console.log("   remove", word);
+                    logCount--;
+                }
+            } else if (operator === "in") {
+                if (word.indexOf(letter) !== -1) {
+                    this.remainingWords[i] = null;
+                    logCount >= 0 && console.log("   remove", word);
+                    logCount--;
+                }
+            } else if (operator === "equals") {
+                if (word === letter) {
+                    this.remainingWords[i] = null;
+                    logCount >= 0 && console.log("   remove", word);
+                    logCount--;
                 }
             }
         });
 
         this.remainingWords = this.remainingWords.filter((w) => { return w !== null});
-        console.log("remove all words with", letter, operator, index, ",", this.remainingWords.length, "remaining words", this.remainingWords);
+        console.log("removed all words with", letter, operator, index, ",", this.remainingWords.length, "remaining words", this.remainingWords);
     }
 }
 

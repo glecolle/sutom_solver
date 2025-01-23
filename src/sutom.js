@@ -92,19 +92,40 @@ class Sutom {
 class Game {
 
     attempts;
+    first;
+    length;
+    secret;
 
-    constructor(secret) {
-        let valid = Sutom.valid(secret);
-        if (valid !== true) {
-            throw new Error(`word ${secret} does not exist: ${valid}`);
+    constructor(secret, length) {
+        if (typeof length == 'number') {
+            this.first = secret;
+            this.length = length;
+        } else {
+            let valid = Sutom.valid(secret);
+            if (valid !== true) {
+                throw new Error(`word ${secret} does not exist: ${valid}`);
+            }
+            this.secret = secret;
+            this.first = this.secret[0];
+            this.length = this.secret.length;
         }
 
-        this.secret = secret;
+        console.log("new Game", this.first, this.length);
+
         this.attempts = 0;
     }
 
-    /** @return true or an array describing the analysis for current word */
-    test(word) {
+    getRemaining() {
+        return [];
+    }
+
+    next() {
+        return [];
+    }
+
+    /** Can only be called when a secret is defined.
+     * @return true or an array describing the analysis for current word */
+    analyse(word) {
         this.attempts++;
 
         let v = Sutom.valid(word);
@@ -131,8 +152,11 @@ class Game {
         return result.letters;
     }
 
-    getInfo() {
-        return {first: this.secret[0], length: this.secret.length};
+    getFirst() {
+        return this.first;
+    }
+
+    getLength() {
+        return this.length;
     }
 }
-
