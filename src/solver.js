@@ -21,11 +21,15 @@ class Solver {
     /** array of strings with words still available, should be reduced after each attempt */
     remainingWords;
 
+    /** count of each letters when known */
+    count;
+
     constructor(game) {
         this.game = game;
 
         this.toTest = [];
         this.letters = {};
+        this.count = {};
         this.possibleLetters = {};
         this.impossibleLetters = [];
 
@@ -46,11 +50,22 @@ class Solver {
     }
 
     /** Iterates to find the word  */
-    solve() {
+    solve(details) {
         let iter;
         for (iter = 1; iter < 50 ; iter++) {
+            let detail = new SolutionDetail();
+            detail.attempt = iter;
+            detail.nbRemaining = this.remainingWords.length;
+
             let word = this.next();
-            let res = this.attempt(word, iter);
+            detail.word = word;
+
+            let res = this.attempt(word, iter, true);
+            detail.result = res;
+
+            if (details) {
+                details.push(detail);
+            }
 
             if (typeof res == "boolean") {
                 return res;
@@ -62,7 +77,7 @@ class Solver {
         return {word: null, attempts: iter};
     }
 
-    attempt(word, iter) {
+    attempt(word, iter, returnResult) {
         let res = this.game.analyse(word);
 
         console.log("attempt", iter, "with word", word, "returned", res);
@@ -77,7 +92,12 @@ class Solver {
             return false;
         }
 
-        return this.reduceRemainingWords(word, res);
+        let remaining = this.reduceRemainingWords(word, res);
+        if (returnResult) {
+            return res;
+        } else {
+            return remaining;
+        }
     }
 
     reduceRemainingWords(w, res) {
@@ -85,7 +105,13 @@ class Solver {
 
 
         for (let i = 1; i < this.length ; i++) {
-            let nbOcc = w.split(w[i]).length - 1;
+            //let nbOcc = w.split(w[i]).length - 1;
+            let nbOcc = 0;
+            for (let r=0 ; r < w.length ; r++) {
+                if (w[r] === w[i]) {
+                    nbOcc++;
+                }
+            }
 
             if (res[i] === true) {
                 if (this.wordMask[i] === "*") {
@@ -110,14 +136,19 @@ class Solver {
             } else if (res[i] === null) {
                 if (nbOcc === 1) {
                     console.log("letter is not present in secret", w[i]);
+                    this.count[w[i]] = 0;
                     this.remove(w[i], "in");
+                } else if (typeof this.count[w[i]] === "undefined") {
+                    let nb = 0;
+                    for(let rank=0 ; rank < w.length ; rank++) {
+                        if (w[i] === w[rank] && typeof res[rank] === "boolean") {
+                            nb++;
+                        }
+                    }
+                    console.log("letter", w[i], "is present exactly", nb, "times");
+                    this.count[w[i]] = nb;
+                    this.remove(w[i], "notExactly", nb);
                 }
-
-                /*if (this.impossibleLetters.indexOf(w[i]) === -1) {
-                    console.log("letter not present in secret", w[i], "at", i);
-                    this.remove(w[i], "at", i);
-                    this.impossibleLetters.push(w[i]);
-                }*/
             }
         }
 
@@ -205,7 +236,7 @@ class Solver {
 
     /**
      * @param letter
-     * @param operator at, notAt, notIn
+     * @param operator at, notAt, notIn, equals, notExactly
      * @param index 0 index based
      */
     remove(letter, operator, index) {
@@ -238,6 +269,18 @@ class Solver {
                 }
             } else if (operator === "equals") {
                 if (word === letter) {
+                    this.remainingWords[i] = null;
+                    logCount >= 0 && console.log("   remove", word);
+                    logCount--;
+                }
+            } else if (operator === "notExactly") {
+                let count = 0;
+                for (let r=0 ; r < word.length ; r++) {
+                    if (word[r] === letter) {
+                        count++;
+                    }
+                }
+                if (count !== index) {
                     this.remainingWords[i] = null;
                     logCount >= 0 && console.log("   remove", word);
                     logCount--;
@@ -282,6 +325,13 @@ class TopN {
     clear() {
         this.items = [];
     }
+}
+
+class SolutionDetail {
+    attempt;
+    word;
+    result;
+    nbRemaining;
 }
 
 class SolverChallenge {

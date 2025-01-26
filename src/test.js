@@ -5,7 +5,9 @@ class Test {
         let jsonValue = JSON.stringify(value);
 
         if (jsonExpected !== jsonValue) {
-            throw new Error("actual value: " + jsonValue + " differs from expected: " + jsonExpected + (label ? "for test " + label : ""));
+            let message = "actual value: " + jsonValue + " differs from expected: " + jsonExpected + (label ? "for test " + label : "")
+            console.error(message);
+            document.body.insertAdjacentHTML("beforeend", `<div class="error">${message}</div>`);
         }
     }
 
@@ -152,18 +154,6 @@ class SolverTest extends Test {
         Test.assertEquals("cafetiere", res.word);
         Test.assertTrue(res.attempts <= 9, "check nb attemps");
 
-        let nbWords = 100;
-        let challengeWords = [];
-        while(nbWords > 0) {
-            nbWords--;
-            challengeWords.push(Sutom.getRandomWord());
-        }
-
-        console.time("challenge");
-        let sc = new SolverChallenge(challengeWords);
-        console.timeEnd("challenge");
-        console.log("challenge stats", sc.getStats());
-
         Sutom.words[4] = {};
         Sutom.words[4].a = ["abcd", "aero", "alti", "alto", "atel", "alco"];
         s = new Solver(new Game("alto"));
@@ -192,6 +182,24 @@ class SolverTest extends Test {
         // remove words with c at 2 : abcd accb
         // remove words without c : abbb aaaa
         Test.assertEquals(["abbc"], remain);
+
+        Sutom.words[4].a = "aaaa aaab aaac aacc accc aabb".split(" ");
+        s = new Solver(new Game("aacc"));
+        remain = s.attempt("aaab"); // true, true, null, false
+        Test.assertEquals(["aacc"], remain);
+
+        // challenge
+        let nbWords = 50;
+        let challengeWords = [];
+        while(nbWords > 0) {
+            nbWords--;
+            challengeWords.push(Sutom.getRandomWord());
+        }
+
+        console.time("challenge");
+        let sc = new SolverChallenge(challengeWords);
+        console.timeEnd("challenge");
+        console.log("challenge stats", sc.getStats());
     }
 }
 

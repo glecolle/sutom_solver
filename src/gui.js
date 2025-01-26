@@ -22,7 +22,7 @@ class Gui {
         <div id="grid" class="hidden"></div>
         <div id="error"></div>`;
 
-        document.getElementById("command").addEventListener("keyup", (e) => {
+        document.getElementById("command").addEventListener("change", (e) => {
             this.initGame(e.currentTarget.value);
         });
 
@@ -36,6 +36,9 @@ class Gui {
         this.demo = false;
         this.trueGame = false;
 
+        document.getElementById("grid").innerHTML = "";
+        document.getElementById("grid").classList.remove("demo");
+
         if (/^[a-z]\s*\d{1,2}$/i.test(param)) {
             // will try to guess a secret from an external source (suggest and allow color user input)
             this.secret = null;
@@ -45,6 +48,7 @@ class Gui {
             this.demo = true;
             this.secret = param;
             this.game = new Game(this.secret);
+            document.getElementById("grid").classList.add("demo");
         } else if (param === "") {
             this.trueGame = true;
             this.game = new Game(Sutom.getRandomWord());
@@ -60,6 +64,13 @@ class Gui {
         this.resetError();
 
         document.getElementById("command").blur();
+
+        if (this.demo) {
+            let solver = new Solver(this.game);
+            let details = [];
+            solver.solve(details);
+            this.displayDemo(details);
+        }
     }
 
     addWord() {
@@ -122,7 +133,7 @@ class Gui {
 
     letterTyped(event) {
         console.log("typed key=", event.key, "code=", event.code, event.currentTarget, this.currentAttempt, this.currentLetter);
-        if (!this.game || !this.game.getLength() || event.currentTarget.id == "command" ) {
+        if (!this.game || !this.game.getLength() || event.target.id == "command" || this.demo) {
             return;
         }
 
@@ -244,8 +255,57 @@ class Gui {
         } else {
             element.classList.remove("misplaced");
         }
+    }
 
-        // TODO mettre à jour les suggestions
+    displayDemo(details) {
+        const delay = 350;
+        let detail = details.shift();
+
+        if (detail) {
+            console.log("display word", detail.word, "for attempt", detail.attempt);
+
+            document.querySelector(`#attempt_${this.currentAttempt} .remaining`).innerText = detail.nbRemaining;
+
+            for(let i=0 ; i < this.game.getLength() ; i++) {
+                setTimeout(() => {
+                    this.updateLetter(detail.attempt, i+1, detail.word[i]);
+                }, delay*(i+1));
+            }
+
+            let done = false;
+            let result = detail.result;
+            if (typeof detail.result.word !== "undefined") {
+                done = true;
+                result = [];
+                for(let i=0 ; i < this.game.getLength() ; i++) {
+                    result.push(true);
+                }
+            }
+
+            console.log("display result", result);
+            if (!Array.isArray(result)) {
+                console.error("result is not an array");
+                return;
+            }
+
+            result.forEach((r,i) => {
+                setTimeout(() => {
+                    let letterElement = document.getElementById(`word_${this.currentAttempt}_${i+1}`);
+                    if (r === true) {
+                        letterElement.classList.add("good");
+                    } else if (r === false) {
+                        letterElement.classList.add("misplaced");
+                    }
+                }, this.game.getLength()* delay + delay*(i+1));
+            });
+
+            if (!done) {
+                setTimeout(() => {
+                    this.addWord();
+                    this.displayDemo(details);
+                }, 2*this.game.getLength()*delay);
+            }
+        }
     }
 }
 
@@ -289,7 +349,6 @@ new Gui();
 /* Scénario interactif
 
 en mode jeu, afficher la liste des lettres possibles et impossibles selon une disposition azerty
-quand on a une lettre à null, compter le nombre de lettres présentes, si d'autres sont présentes, compter le nombre bien et mal placées et si pas déj) fait, remove(letter, "not", count), stocker l'info dans tableau count[letter]=int
 mode démo quand on saisit un mot (avec solveur et complétion automatique)
 icones cliquables
 on me suggère un mot contenant une lettre à une mauvaise position ainsi qu'un mot ne contenant pas une lettre obligatoire, ajouter des tests unitaires pour tirer cela au clair

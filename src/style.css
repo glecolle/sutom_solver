@@ -48,6 +48,10 @@ html {
     align-items: center;
 }
 
+.demo .action {
+    display: none;
+}
+
 .action {
     background-color: rgba(0, 119, 199, 0.568);
     line-height: 2em;
