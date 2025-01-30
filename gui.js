@@ -11,6 +11,7 @@ class Gui {
     game;
 
     constructor() {
+        new Sutom();
         this.build();
     }
 
@@ -22,13 +23,30 @@ class Gui {
         <div id="grid" class="hidden"></div>
         <div id="error"></div>`;
 
-        document.getElementById("command").addEventListener("change", (e) => {
+        let command = document.getElementById("command")
+        command.addEventListener("change", (e) => {
             this.initGame(e.currentTarget.value);
         });
 
         document.querySelector("body").addEventListener("keyup", this.letterTyped.bind(this));
         document.querySelector("body").addEventListener("click", this.letterClicked.bind(this));
-        document.getElementById("command").focus();
+        command.focus();
+
+        let searchParams = window.location.search.replace("?", "").split("&");
+        let params = {};
+        if (searchParams.length > 0) {
+            searchParams.forEach(v => {
+                let kv = v.split("=");
+                if (kv.length == 2) {
+                    params[kv[0]] = decodeURIComponent(kv[1]);
+                }
+            });
+        }
+
+        if (params.w) {
+            command.classList.add("hidden");
+            this.initGame(params.w);
+        }
     }
 
     initGame(param) {

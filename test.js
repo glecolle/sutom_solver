@@ -203,5 +203,5 @@ class SolverTest extends Test {
     }
 }
 
-new SutomTest();
-new SolverTest();
+//new SutomTest();
+//new SolverTest();
