@@ -19,7 +19,7 @@ class Gui {
         let body = document.getElementsByTagName("body")[0];
 
         body.innerHTML = `<h1>Sutom Solver</h1>
-        <input id="command" placeholder= "mot ou première suivie du nombre de lettres" size="40"></input>
+        <input id="command" placeholder= "mot ou première suivie du nombre de lettres" size="17"></input>
         <div id="grid" class="hidden"></div>
         <div id="error"></div>`;
 
@@ -51,6 +51,8 @@ class Gui {
 
     initGame(param) {
         console.log("init word", param);
+        param = param.toLocaleLowerCase();
+
         this.demo = false;
         this.trueGame = false;
 
