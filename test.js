@@ -202,6 +202,3 @@ class SolverTest extends Test {
         console.log("challenge stats", sc.getStats());
     }
 }
-
-//new SutomTest();
-//new SolverTest();

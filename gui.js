@@ -18,12 +18,12 @@ class Gui {
     build() {
         let body = document.getElementsByTagName("body")[0];
 
-        body.innerHTML = `<h1>Sutom Solver</h1>
+        body.innerHTML = `<h1>SUTOM Solver</h1>
         <input id="command" placeholder= "mot ou première suivie du nombre de lettres" size="17"></input>
         <div id="grid" class="hidden"></div>
         <div id="error"></div>`;
 
-        let command = document.getElementById("command")
+        let command = document.getElementById("command");
         command.addEventListener("change", (e) => {
             this.initGame(e.currentTarget.value);
         });
@@ -46,6 +46,11 @@ class Gui {
         if (params.w) {
             command.classList.add("hidden");
             this.initGame(params.w);
+            return;
+        }
+        if (params.test == 1) {
+            new SutomTest();
+            new SolverTest();
         }
     }
 
@@ -324,6 +329,8 @@ class Gui {
                     this.addWord();
                     this.displayDemo(details);
                 }, 2*this.game.getLength()*delay);
+            } else {
+                this.demo = false;
             }
         }
     }
